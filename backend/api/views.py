@@ -176,5 +176,142 @@ class PostBookmarkAPIView(APIView):
                 post = post,
             )
             return Response({"message":"Post favoritado"}, status=status.HTTP_201_CREATED)
-
         
+# Views para o Dashboard
+
+class DashboardStatsAPIView(generics.ListAPIView):
+    serializer_class = api_serializer.AuthorSerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        user_id = self.kwargs['user_id']
+        user = api_models.User.objects.get(id=user_id)
+
+        views = api_models.Post.objects.filter(user=user).aggregate(view = Sum("view"))['view']
+        posts = api_models.Post.objects.filter(user=user).count()
+        likes = api_models.Post.objects.filter(user=user).aggregate(total_likes = Sum("likes"))['total_likes']
+        bookmarks = api_models.Bookmark.objects.filter(post__user = user).count()
+
+        return [{
+            "views": views,
+            "posts": posts,
+            "likes": likes,
+            "bookmarks": bookmarks,
+        }]
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
+class DashboardPostLists(generics.ListAPIView):
+    serializer_class = api_serializer.PostSerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        user_id = self.kwargs['user_id']
+        user = api_models.User.objects.get(id=user_id)
+        return api_models.Post.objects.filter(user=user).order_by("-id")
+    
+class DashboardComentarioLists(generics.ListAPIView):
+    serializer_class = api_serializer.ComentarioSerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        user_id = self.kwargs['user_id']
+        user = api_models.User.objects.get(id=user_id)
+
+        comentarios = api_models.Comentario.objects.filter(post__user=user)
+        return comentarios
+    
+class DashboardNotificacaoLists(generics.ListAPIView):
+    serialzier_class = api_serializer.NotificacaoSerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        user_id = self.kwargs['user_id']
+        user = api_models.User.objects.get(id=user_id)
+        notificacoes = api_models.Notificacao.objects.filter(seen=False, user=user)
+
+class DashboardNotificacaoVista(APIView):
+    def post(self, request):
+        id_notificacao = request.data['noti_id']
+        notificacao = api_models.Notificacao.objects.get(id=id_notificacao)
+
+        notificacao.seen=True
+        notificacao.save()
+        return Response({"message":"Notificação marcada como vista"}, status=status.HTTP_200_OK)
+    
+class DashboardRespostaComentarioAPIView(APIView):
+    def post(self, request):
+        id_comentario = request.data['comment_id']
+        resposta = request.data['resposta']
+
+        comentario = api_models.Comentario.objects.get(id=id_comentario)
+        comentario.resposta = resposta
+        comentario.save()
+
+        return Response({"message":"Resposta do comentário enviada"}, status=status.HTTP_201_CREATED)
+    
+class DashboardPostAPIVIew(generics.CreateAPIView):
+    serializer_class = api_serializer.PostSerializer
+    permission_classes = [AllowAny]
+
+    def create(self, request, *args, **kwargs):
+        id_user = request.data.get("user_id")
+        titulo = request.data.get("titulo")
+        imagem = request.data.get("imagem")
+        descricao = request.data.get("descricao")
+        tags = request.data.get("tags")
+        id_categoria = request.data.get("categoria")
+        post_status = request.data.get("post_status")
+
+        user = api_models.User.objects.get(id=id_user)
+        categoria = api_models.Categoria.objects.get(id=id_categoria)
+
+        api_models.Post.objects.create(
+            user=user,
+            titulo = titulo,
+            imagem = imagem,
+            descricao = descricao,
+            tags = tags,
+            categoria=categoria,
+            status = post_status,
+        )
+
+        return Response({"message":"Post criado com sucesso"}, status=status.HTTP_201_CREATED)
+    
+class DashboardEditarPostAPIView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = api_serializer.PostSerializer
+    permission_classes = [AllowAny]
+
+    def get_object(self):
+        user_id = self.kwargs['user_id']
+        post_id = self.kwargs['post_id']
+
+        user = api_models.User.objects.get(id=user_id)
+        post = api_models.Post.objects.get(id=post_id, user=user)
+        return post
+    
+    def update(self, request, *args, **kwargs):
+        instancia_post = self.get_object()
+
+        titulo = request.data.get("titulo")
+        imagem = request.data.get("imagem")
+        descricao = request.data.get("descricao")
+        tags = request.data.get("tags")
+        id_categoria = request.data.get("categoria")
+        post_status = request.data.get("post_status")
+
+        categoria = api_models.Categoria.objects.get(id=id_categoria)
+
+        instancia_post.titulo = titulo
+        if imagem != "undefined":
+            instancia_post.imagem = imagem
+        instancia_post.descricao = descricao
+        instancia_post.tags = tags
+        instancia_post.categoria = categoria
+        instancia_post.status = post_status
+        instancia_post.save()
+
+        return Response({"message":"Post atualizado com sucesso"}, status=status.HTTP_200_OK)

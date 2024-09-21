@@ -59,13 +59,13 @@ class CategorySerializer(serializers.ModelSerializer):
         model = api_models.Categoria
         fields = ["id","titulo","imagem","slug","post_count"]
 
-class CommentSerializer(serializers.ModelSerializer):
+class ComentarioSerializer(serializers.ModelSerializer):
     class Meta:
         model = api_models.Comentario
         fields = "__all__"
 
     def __init__(self, *args, **kwargs):
-        super(CommentSerializer, self).__init__(*args,**kwargs)
+        super(ComentarioSerializer, self).__init__(*args,**kwargs)
         request = self.context.get("request")
         if request and request.method == "POST":
             self.Meta.depth = 0
@@ -100,13 +100,13 @@ class BookmarkSerializer(serializers.ModelSerializer):
         else:
             self.Meta.depth = 1
 
-class NotificationSerializer(serializers.ModelSerializer):
+class NotificacaoSerializer(serializers.ModelSerializer):
     class Meta:
         model = api_models.Notificacao
         fields = "__all__"
 
     def __init__(self, *args, **kwargs):
-        super(NotificationSerializer, self).__init__(*args,**kwargs)
+        super(NotificacaoSerializer, self).__init__(*args,**kwargs)
         request = self.context.get("request")
         if request and request.method == "POST":
             self.Meta.depth = 0
