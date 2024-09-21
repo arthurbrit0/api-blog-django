@@ -81,3 +81,100 @@ class PostDetailAPIView(generics.RetrieveAPIView):
         post.save()
         return post
 
+class LikePostAPIView(APIView):
+    @swagger_auto_schema(
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'user_id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                'post_id': openapi.Schema(type=openapi.TYPE_INTEGER),
+            },
+        ),
+    )
+
+    def post(self,request):
+        user_id = request.data['user_id']
+        post_id = request.data['post_id']
+
+        user = api_models.User.objects.get(id=user_id)
+        post = api_models.Post.objects.get(id=post_id)
+
+        if user in post.likes.all():
+            post.likes.remove(user)
+            return Response({"message": "Post descurtido"}, status=status.HTTP_200_OK)
+        else:
+            post.likes.add(user)
+
+            api_models.Notificacao.objects.create(
+                user=post.user,
+                post=post,
+                tipo="Like",
+            )
+            return Response({"message": "Post curtido"}, status=status.HTTP_201_CREATED)
+        
+class PostComentarioAPIView(APIView):
+
+    @swagger_auto_schema(
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'post_id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                'name': openapi.Schema(type=openapi.TYPE_STRING),
+                'email': openapi.Schema(type=openapi.TYPE_STRING),
+                'comment': openapi.Schema(type=openapi.TYPE_STRING),
+            },
+        ),
+    )
+
+    def post(self, request):
+        post_id = request.data['post_id']
+        nome_user = request.data['name']
+        email = request.data['email']
+        comentario = request.data['comment']
+
+        post = api_models.Post.objects.get(id=post_id)
+        api_models.Comentario.objects.create(
+            post=post,
+            nome_user=nome_user,
+            email=email,
+            comentario=comentario
+        )
+
+        api_models.Notificacao.objects.create(
+            user=post.user,
+            post=post,
+            tipo="Comentario",
+        )
+
+        return Response({"message":"Comentário feito"}, status=status.HTTP_201_CREATED)
+    
+class PostBookmarkAPIView(APIView):
+    
+    @swagger_auto_schema(
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'post_id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                'user_id': openapi.Schema(type=openapi.TYPE_INTEGER),
+            },
+        ),
+    )
+    def post(self, request):
+        post_id = request.data['post_id']
+        user_id = request.data['user_id']
+
+        user = api_models.User.objects.get(id=user_id)
+        post = api_models.Post.objects.get(id=post_id)
+        bookmark = api_models.Bookmark.objects.filter(post=post, user=user).first()
+
+        if bookmark:
+            bookmark.delete()
+            return Response({"message":"Post desfavoritado"}, status=status.HTTP_200_OK)
+        else:
+            api_models.Bookmark.objects.create(
+                user = user,
+                post = post,
+            )
+            return Response({"message":"Post favoritado"}, status=status.HTTP_201_CREATED)
+
+        
