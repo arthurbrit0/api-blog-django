@@ -52,6 +52,8 @@ class ProfileSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 class CategorySerializer(serializers.ModelSerializer):
+    post_count = serializers.SerializerMethodField()
+
     def get_post_count(self, categoria):
         return categoria.posts.count()
     
