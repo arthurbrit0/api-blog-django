@@ -177,6 +177,67 @@ class PostBookmarkAPIView(APIView):
             )
             return Response({"message":"Post favoritado"}, status=status.HTTP_201_CREATED)
         
+def generate_numeric_otp(length=7):
+    otp = ''.join([str(random.randint(0, 9)) for _ in range(length)])
+    return otp
+
+class PasswordEmailVerify(generics.RetrieveAPIView):
+    permission_classes = (AllowAny,)
+    serializer_class = api_serializer.UserSerializer
+    
+    def get_object(self):
+        email = self.kwargs['email']
+        user = api_models.User.objects.get(email=email)
+        
+        if user:
+            user.otp = generate_numeric_otp()
+            uidb64 = user.pk
+            refresh = RefreshToken.for_user(user)
+            reset_token = str(refresh.access_token)
+            user.reset_token = reset_token
+            user.save()
+
+            link = f"http://localhost:5173/create-new-password?otp={user.otp}&uidb64={uidb64}&reset_token={reset_token}"
+            
+            merge_data = {
+                'link': link, 
+                'username': user.username, 
+            }
+            subject = f"Password Reset Request"
+            text_body = render_to_string("email/password_reset.txt", merge_data)
+            html_body = render_to_string("email/password_reset.html", merge_data)
+            
+            msg = EmailMultiAlternatives(
+                subject=subject, from_email=settings.FROM_EMAIL,
+                to=[user.email], body=text_body
+            )
+            msg.attach_alternative(html_body, "text/html")
+            msg.send()
+        return user
+    
+
+class PasswordChangeView(generics.CreateAPIView):
+    permission_classes = (AllowAny,)
+    serializer_class = api_serializer.UserSerializer
+    
+    def create(self, request, *args, **kwargs):
+        payload = request.data
+        
+        otp = payload['otp']
+        uidb64 = payload['uidb64']
+        password = payload['password']
+
+        
+
+        user = api_models.User.objects.get(id=uidb64, otp=otp)
+        if user:
+            user.set_password(password)
+            user.otp = ""
+            user.save()
+            
+            return Response( {"message": "Password Changed Successfully"}, status=status.HTTP_201_CREATED)
+        else:
+            return Response( {"message": "An Error Occured"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 # Views para o Dashboard
 
 class DashboardStatsAPIView(generics.ListAPIView):
