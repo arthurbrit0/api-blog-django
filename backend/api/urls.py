@@ -7,6 +7,8 @@ urlpatterns = [
     path('user/registrar/', api_views.RegisterView.as_view(), name="registrar"),
     path('user/token/refresh/', TokenRefreshView.as_view(),name="refresh"),
     path('user/profile/<user_id>', api_views.ProfileView.as_view(), name="profile"),
+    path('user/password-reset/<email>/', api_views.PasswordEmailVerify.as_view(), name='password_reset'),
+    path('user/password-change/', api_views.PasswordChangeView.as_view(), name='password_reset'),
 
     # Endpoint p/ post
 
@@ -22,6 +24,7 @@ urlpatterns = [
 
     path('autor/dashboard/estatisticas/<user_id>', api_views.DashboardStatsAPIView.as_view(), name="dashboard"),
     path('autor/dashboard/lista-comentarios/<user_id>', api_views.DashboardComentarioLists.as_view(), name="dashboard-comentarios"),
+    path('autor/dashboard/lista-posts/', api_views.DashboardPostLists.as_view(), name="dashboard-posts"),
     path('autor/dashboard/lista-notificacoes/<user_id>', api_views.DashboardNotificacaoLists.as_view(), name="dashboard-notificacoes"),
     path('autor/dashboard/notificacao-vista', api_views.DashboardNotificacaoVista.as_view(), name="dashboard-notificacao-vista"),
     path('autor/dashboard/resposta-comentario/', api_views.DashboardRespostaComentarioAPIView.as_view(), name="dashboard-resposta"),
